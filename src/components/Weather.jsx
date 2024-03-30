@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import axios from 'axios';
-import { StyleSheet, Image, View, Text } from 'react-native';
+import { StyleSheet, Image, View, Text, PermissionsAndroid } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
 // import { useDispatch, useSelector} from 'react-redux';
 import { getWeatherId } from '../redux/weatherDuck.js';
 import store from '../redux/store';
@@ -14,6 +15,32 @@ import snow_icon from '../assets/snow.png';
 import wind_icon from '../assets/wind.png';
 import theme from './theme.js';
 
+const requestLocationPermission = async () => {
+    try {
+         const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: 'Permiso Geolocation ',
+              message: 'Podemos acceder a su localización?',
+              buttonNeutral: 'Preguntar después',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            },
+          );
+          console.log('granted', granted);
+          if (granted === 'granted') {
+            console.log('You can use Geolocation');
+            return true;
+          } else {
+            console.log('You cannot use Geolocation');
+            return false;
+          }
+         
+    } catch (err) {
+        return false;
+    }
+};
+
 const Weather = () => {
     
     let api_key = '040f34faff678040d575cbf5826ee65a';
@@ -21,38 +48,40 @@ const Weather = () => {
     // const dispatch = useDispatch()
     const [data, setData] = useState([]);
     const [isLoading, setLoading] = useState(true);
+    const [location, setLocation] = useState(false);
 
-    const getAPIdata = async () => {
-        try {
+    const getLocation = () => {
 
-            const url = 'https://jsonplaceholder.typicode.com/posts/1';
-            let result = await fetch(url);
-            const json = await result.json();
-            //result = result.json();
-            setData(json)
-            console.warn(json);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+        const result = requestLocationPermission();
+
+        result.then(res => {
+            if (res) {
+                Geolocation.getCurrentPosition(
+                    position => {
+                        // console.log(position);
+                        setLocation(position);
+                    },
+                    error => {
+                        // console.log(error.code, error.message);
+                        setLocation(false);
+                    },
+                    {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+                );
+            }        
+        });
     }
 
     const getWeatherId = async ()  => {
         try {
-            //const {offset} = getState().Service
-    
-            // console.warn('getWeatherId ');
-            const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=Cordoba,AR&units=metric&lang=es&&appid=040f34faff678040d575cbf5826ee65a`);
-            //const json = await data.json();
-            console.warn(data);
-            setData(data);
-            // dispatch({
-            //     type: GET_WEATHER_ID,
-            //     payload: {
-            //         array: response.data
-            //     }
-            // })  
+            if (location && location.coords) {
+                // console.log(location.coords.latitude);
+                const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${location.coords.latitude}&lon=${location.coords.longitude}&units=metric&lang=es&appid=040f34faff678040d575cbf5826ee65a`);
+                setData(data);
+            // } else {
+            //     const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=Cordoba,AR&units=metric&lang=es&&appid=040f34faff678040d575cbf5826ee65a`);
+            //     setData(data);
+                // Manejar el caso donde no hay datos de ubicación disponibles
+            }
     
         } catch(error) {
             console.warn(error)
@@ -60,19 +89,20 @@ const Weather = () => {
     }
 
     useEffect(() => {
-        //setData('');
+        setData([]);
+        setLocation(false);
+        getLocation();
         getWeatherId();
+            
     },[])    
 
     return (
         <View style={ styles.container }>
             <Text style={styles.text}>Estado del Tiempo</Text>
-            <View style={{padding:10}}>
-                {/* <Image style={styles.image} source={require('../assets/cloud.png')} /> */}
-            </View>
+            
             {
                 data && data.weather && data.weather.length > 0 ?
-                <View style = {styles.box}>
+                <View style={ styles.container }>
                     <Image style={styles.image} source={{uri: `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`}} />
                     <Text style={styles.text}>
                         {data.weather[0].description}
@@ -82,11 +112,22 @@ const Weather = () => {
             }
             {
                 data && data.main ?
-                <View style = {styles.container}>
-                    <Text style={styles.textBig}>
-                        {data.main.temp} C°
+                <View style={ styles.container }>
+                    <View style={ styles.container }>
+                        <Text style={styles.textBig}>
+                            {data.main.temp} C°
+                        </Text>
+                    </View>
+                    <View style={ styles.containerrow }>
+                    <Image style={styles.image_humidity} source={require('../assets/humidity.png')} />
+                    <Text style={styles.text}>
+                        {data.main.humidity} %
                     </Text>
-                
+                    <Image style={styles.image_humidity} source={require('../assets/wind.png')} />
+                    <Text style={styles.text}>
+                        {data.main.humidity} %
+                    </Text>
+                    </View>
                 </View>
                 : null
             }
@@ -101,11 +142,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    box: {
+    containerrow: {
+        flex: 1,
+        flexDirection: 'row',
+        backgroundColor: theme.backgrounds.backgroundPrimary,
+        alignItems: 'stretched',
+    },
+    container_column: {
         alignItems: 'center',
-      },
+        justifyContent: 'center',
+    },
+    box: {
+        width: 300,
+        height: 300,
+        backgroundColor: theme.color.textSecondary,
+    },
     text:{
         color: theme.color.white,
+        padding:10,
         fontSize: theme.fontSizes.subheadings,
     },
     textSmall:{
@@ -123,6 +177,11 @@ const styles = StyleSheet.create({
         height: 200,
         borderRadius: 6
     },
+    image_humidity: {
+        width: 50,
+        height: 50,
+        borderRadius: 6
+    }
 });
 
 export default Weather;
