@@ -27,12 +27,12 @@ const requestLocationPermission = async () => {
               buttonPositive: 'OK',
             },
           );
-          console.log('granted', granted);
+          //console.log('granted', granted);
           if (granted === 'granted') {
-            console.log('You can use Geolocation');
+            //console.warn('You can use Geolocation', granted);
             return true;
           } else {
-            console.log('You cannot use Geolocation');
+            //console.log('You cannot use Geolocation');
             return false;
           }
          
@@ -47,59 +47,103 @@ const Weather = () => {
 
     // const dispatch = useDispatch()
     const [data, setData] = useState([]);
-    const [isLoading, setLoading] = useState(true);
-    const [location, setLocation] = useState(false);
+    const [loading, setLoading] = useState(null);
+    const [location, setLocation] = useState(true);
 
-    const getLocation = () => {
+    // const getLocation = () => {
 
-        const result = requestLocationPermission();
+    //     const result = requestLocationPermission();
 
-        result.then(res => {
-            if (res) {
+    //     result.then(res => {
+    //         if (res) {
+    //             Geolocation.getCurrentPosition(
+    //                 position => {
+    //                     //console.log(position);
+    //                     setLocation(position);
+    //                 },
+    //                 error => {
+    //                     // console.log(error.code, error.message);
+    //                     setLocation(false);
+    //                 },
+    //                 {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+    //             );
+    //         }        
+    //     });
+    // }
+
+    // const getWeatherId = async ()  => {
+    //     try {
+    //         if (location && location.coords) {
+    //             // console.log(location.coords.latitude);
+    //             const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${location.coords.latitude}&lon=${location.coords.longitude}&units=metric&lang=es&appid=040f34faff678040d575cbf5826ee65a`);
+    //             setData(data);
+    //         // } else {
+    //         //     const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=Cordoba,AR&units=metric&lang=es&&appid=040f34faff678040d575cbf5826ee65a`);
+    //         //     setData(data);
+    //             // Manejar el caso donde no hay datos de ubicación disponibles
+    //         }
+    
+    //     } catch(error) {
+    //         console.warn(error)
+    //     }
+    // }
+
+    // useEffect(() => {
+    //     const interval = setInterval(() => {
+    //         getLocation();
+    //         getWeatherId();
+    //     }, 3000);
+    // },[])    
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const permissionGranted = await requestLocationPermission();
+            if (permissionGranted) {
                 Geolocation.getCurrentPosition(
                     position => {
-                        // console.log(position);
                         setLocation(position);
+                        setLoading(false);
                     },
                     error => {
-                        // console.log(error.code, error.message);
-                        setLocation(false);
+                        console.warn(error.code, error.message);
+                        setLoading(false);
                     },
                     {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
                 );
-            }        
-        });
-    }
-
-    const getWeatherId = async ()  => {
-        try {
-            if (location && location.coords) {
-                // console.log(location.coords.latitude);
-                const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${location.coords.latitude}&lon=${location.coords.longitude}&units=metric&lang=es&appid=040f34faff678040d575cbf5826ee65a`);
-                setData(data);
-            // } else {
-            //     const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=Cordoba,AR&units=metric&lang=es&&appid=040f34faff678040d575cbf5826ee65a`);
-            //     setData(data);
-                // Manejar el caso donde no hay datos de ubicación disponibles
+            } else {
+                setLoading(false);
             }
+        };
     
-        } catch(error) {
-            console.warn(error)
-        }
-    }
-
-    useEffect(() => {
-        setData([]);
-        setLocation(false);
-        getLocation();
-        getWeatherId();
-            
-    },[])    
+        const fetchWeatherData = async () => {
+            if (location && location.coords) {
+                try {
+                    const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${location.coords.latitude}&lon=${location.coords.longitude}&units=metric&lang=es&appid=040f34faff678040d575cbf5826ee65a`);
+                    setData(data);
+                } catch (error) {
+                    console.warn(error);
+                }
+            }
+        };
+    
+        const updateWeather = async () => {
+            await fetchData();
+            await fetchWeatherData();
+            setTimeout(updateWeather, 120000); // Actualizar cada 2 minuto
+        };
+    
+        updateWeather();
+    
+        // Limpieza
+        return () => clearTimeout();
+    }, [location]);
 
     return (
         <View style={ styles.container }>
             <Text style={styles.text}>Estado del Tiempo</Text>
-            
+            {loading ? (
+                <ActivityIndicator size="large" color="#ffffff" />
+            ) : null}
             {
                 data && data.weather && data.weather.length > 0 ?
                 <View style={ styles.container }>
@@ -125,7 +169,7 @@ const Weather = () => {
                     </Text>
                     <Image style={styles.image_humidity} source={require('../assets/wind.png')} />
                     <Text style={styles.text}>
-                        {data.main.humidity} %
+                        {data.main.humidity} m/s
                     </Text>
                     </View>
                 </View>
