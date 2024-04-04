@@ -1,8 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import axios from 'axios';
-import { StyleSheet, Image, View, Text, PermissionsAndroid } from 'react-native';
+import { ActivityIndicator, StyleSheet, Image, View, Text, PermissionsAndroid } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-// import { useDispatch, useSelector} from 'react-redux';
 import { getWeatherId } from '../redux/weatherDuck.js';
 import store from '../redux/store';
 import search_icon from '../assets/search.png';
@@ -43,59 +42,12 @@ const requestLocationPermission = async () => {
 
 const Weather = () => {
     
-    let api_key = '040f34faff678040d575cbf5826ee65a';
-
-    // const dispatch = useDispatch()
     const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [location, setLocation] = useState(true);
 
-    // const getLocation = () => {
-
-    //     const result = requestLocationPermission();
-
-    //     result.then(res => {
-    //         if (res) {
-    //             Geolocation.getCurrentPosition(
-    //                 position => {
-    //                     //console.log(position);
-    //                     setLocation(position);
-    //                 },
-    //                 error => {
-    //                     // console.log(error.code, error.message);
-    //                     setLocation(false);
-    //                 },
-    //                 {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
-    //             );
-    //         }        
-    //     });
-    // }
-
-    // const getWeatherId = async ()  => {
-    //     try {
-    //         if (location && location.coords) {
-    //             // console.log(location.coords.latitude);
-    //             const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${location.coords.latitude}&lon=${location.coords.longitude}&units=metric&lang=es&appid=040f34faff678040d575cbf5826ee65a`);
-    //             setData(data);
-    //         // } else {
-    //         //     const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=Cordoba,AR&units=metric&lang=es&&appid=040f34faff678040d575cbf5826ee65a`);
-    //         //     setData(data);
-    //             // Manejar el caso donde no hay datos de ubicación disponibles
-    //         }
-    
-    //     } catch(error) {
-    //         console.warn(error)
-    //     }
-    // }
-
-    // useEffect(() => {
-    //     const interval = setInterval(() => {
-    //         getLocation();
-    //         getWeatherId();
-    //     }, 3000);
-    // },[])    
-
     useEffect(() => {
+
         const fetchData = async () => {
             const permissionGranted = await requestLocationPermission();
             if (permissionGranted) {
@@ -142,7 +94,7 @@ const Weather = () => {
         <View style={ styles.container }>
             <Text style={styles.text}>Estado del Tiempo</Text>
             {loading ? (
-                <ActivityIndicator size="large" color="#ffffff" />
+                <ActivityIndicator size="large" color="#00ff00" />
             ) : null}
             {
                 data && data.weather && data.weather.length > 0 ?
